@@ -1,6 +1,7 @@
 package me.enderkill98.ringmessage.mixin.client;
 
 import me.enderkill98.ringmessage.ClientMod;
+import me.enderkill98.ringmessage.config.RingConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,6 +28,11 @@ public class SendMessageMixin {
                 MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(chatText);
             }
             info.setReturnValue(true); // Close chat screen and prevent further handling
+        } else if(RingConfig.getInstance().directUse && !chatText.startsWith("/")) {
+            chatText = "send " + chatText;
+            String[] args = chatText.contains(" ") ? chatText.split(" ") : new String[]{chatText};
+            ClientMod.INSTANCE.ringMessageCommand.onExecute("rmsg", args);
+            info.setReturnValue(true);
         }
     }
 
