@@ -24,14 +24,14 @@ public class SendMessageMixin {
 
             ClientMod.INSTANCE.ringMessageCommand.onExecute(cmdName, args);
 
-            if (addToHistory) {
-                MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(chatText);
-            }
+            if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(chatText);
             info.setReturnValue(true); // Close chat screen and prevent further handling
         } else if(RingConfig.getInstance().directUse && !chatText.startsWith("/") && !chatText.startsWith(".") && !chatText.startsWith("#")) {
             chatText = "send " + chatText;
             String[] args = chatText.contains(" ") ? chatText.split(" ") : new String[]{chatText};
             ClientMod.INSTANCE.ringMessageCommand.onExecute("rmsg", args);
+
+            if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(chatText);
             info.setReturnValue(true);
         }
     }
