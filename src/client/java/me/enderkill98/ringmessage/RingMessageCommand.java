@@ -74,11 +74,11 @@ public class RingMessageCommand {
             if(args[1].equalsIgnoreCase("on")) {
                 RingConfig.getInstance().debug = true;
                 RingConfig.getInstance().save();
-                sendUsage(client, "§aDebug: " + (RingConfig.getInstance().debug ? "§2On" : "§4Off"));
+                sendMessage(client, "§aDebug: " + (RingConfig.getInstance().debug ? "§2On" : "§4Off"));
             }else if(args[1].equalsIgnoreCase("off")) {
                 RingConfig.getInstance().debug = false;
                 RingConfig.getInstance().save();
-                sendUsage(client, "§aDebug: " + (RingConfig.getInstance().debug ? "§2On" : "§4Off"));
+                sendMessage(client, "§aDebug: " + (RingConfig.getInstance().debug ? "§2On" : "§4Off"));
             }else {
                 sendMessage(client, "§cPlease specify either \"On\" or \"Off\"!");
             }
