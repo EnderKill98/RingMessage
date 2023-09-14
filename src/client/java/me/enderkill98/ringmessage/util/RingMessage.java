@@ -100,7 +100,7 @@ public class RingMessage {
                     // Received message was encrypted with given details. Use same params for sending along
                     // Prefer to compress if sender also compressed but use own defaults (all compressions should work rn on the mod)
                     fullMessage = NoChatReportsUtil.encryptAndCompress(ncrDecryptionInfo.keyIndex(), ncrDecryptionInfo.encapsulation(),
-                            "/msg " + nextMember + " ", fullMessage,
+                            "msg " + nextMember + " ", fullMessage,
                             ncrDecryptionInfo.compression() != null ? NoChatReportsUtil.CompressionPolicy.Preferred : NoChatReportsUtil.CompressionPolicy.Never,
                             null /* = Auto Determine */);
                 }
@@ -108,7 +108,10 @@ public class RingMessage {
             if(!RingConfig.getInstance().debug)
                 // Hide sent message confirmation
                 ClientMod.INSTANCE.hideSentFullMessages.put(fullMessage.trim(), System.currentTimeMillis() + 5000);
-            ChatUtil.sendCommand(client, "msg " + nextMember + " " + fullMessage);
+            if(fullMessage.startsWith("msg "))
+                ChatUtil.sendCommand(client, fullMessage);
+            else
+                ChatUtil.sendCommand(client, "msg " + nextMember + " " + fullMessage);
         }
         return true;
     }
