@@ -11,7 +11,7 @@ import java.util.HashMap;
 public class RingMessageCommand {
 
     private void sendUsage(MinecraftClient client, String cmdName) {
-        sendMessage(client, "§eUsage: $" + cmdName + " <members <show/set/setForAll ...>/send <message...>/debug [on/off]/alwaysEncrypt [on/off]/test <Member>>");
+        sendMessage(client, "§eUsage: $" + cmdName + " <members <show/set/setForAll ...>/send <message...>/debug [on/off]/alwaysEncrypt [on/off]/test <Member>/directUse [on/off]>");
     }
 
     private void sendMessage(MinecraftClient client, String message) {
@@ -81,6 +81,27 @@ public class RingMessageCommand {
                 sendMessage(client, "§eTesting §6" + targetMember + "§e...");
             }else {
                 sendMessage(client, "§cFailed to send off test. See logs for more!");
+            }
+            return;
+        }
+
+        if(args[0].equalsIgnoreCase("directUse")) {
+            if(args.length == 1) {
+                sendMessage(client, "§aDirectUse: " + (RingConfig.getInstance().directUse ? "§2On" : "§4Off"));
+                sendUsage(client, cmdName);
+                return;
+            }
+
+            if(args[1].equalsIgnoreCase("on")) {
+                RingConfig.getInstance().directUse = true;
+                RingConfig.getInstance().save();
+                sendMessage(client, "§aDirectUse: " + (RingConfig.getInstance().directUse ? "§2On" : "§4Off"));
+            }else if(args[1].equalsIgnoreCase("off")) {
+                RingConfig.getInstance().directUse = false;
+                RingConfig.getInstance().save();
+                sendMessage(client, "§aDirectUse: " + (RingConfig.getInstance().directUse ? "§2On" : "§4Off"));
+            }else {
+                sendMessage(client, "§cPlease specify either \"On\" or \"Off\"!");
             }
             return;
         }
