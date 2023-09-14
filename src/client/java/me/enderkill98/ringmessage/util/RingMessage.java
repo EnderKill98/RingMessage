@@ -173,7 +173,7 @@ public class RingMessage {
         @Nullable String nextMember = RingMessage.findNextMember(client.getSession().getUsername(), client.getSession().getUsername(), onlineMembers, hashModification);
         if(nextMember != null) {
             String fullMessage = " [rm:s=" + client.getSession().getUsername() + ":h=" + hashModification + "]" + message;
-            if(NoChatReportsUtil.isModAvailable() && NoChatReportsUtil.isEnabled())
+            if(NoChatReportsUtil.isModAvailable() && (NoChatReportsUtil.isEnabled() || RingConfig.getInstance().alwaysEncrypt))
                 fullMessage = NoChatReportsUtil.encrypt(fullMessage);
             if(!RingConfig.getInstance().debug)
                 // Hide sent message confirmation

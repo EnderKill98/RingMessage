@@ -11,7 +11,7 @@ import java.util.Arrays;
 public class RingMessageCommand {
 
     private void sendUsage(MinecraftClient client, String cmdName) {
-        sendMessage(client, "§eUsage: $" + cmdName + " <members <show/set ...>/send <message...>/debug [on/off]>");
+        sendMessage(client, "§eUsage: $" + cmdName + " <members <show/set ...>/send <message...>/debug [on/off]/alwaysEncrypt [on/off]>");
     }
 
     private void sendMessage(MinecraftClient client, String message) {
@@ -79,6 +79,27 @@ public class RingMessageCommand {
                 RingConfig.getInstance().debug = false;
                 RingConfig.getInstance().save();
                 sendMessage(client, "§aDebug: " + (RingConfig.getInstance().debug ? "§2On" : "§4Off"));
+            }else {
+                sendMessage(client, "§cPlease specify either \"On\" or \"Off\"!");
+            }
+            return;
+        }
+
+        if(args[0].equalsIgnoreCase("alwaysEncrypt")) {
+            if(args.length == 1) {
+                sendMessage(client, "§aAlways Encrypt (own Messages): " + (RingConfig.getInstance().alwaysEncrypt ? "§2On" : "§4Off"));
+                sendUsage(client, cmdName);
+                return;
+            }
+
+            if(args[1].equalsIgnoreCase("on")) {
+                RingConfig.getInstance().alwaysEncrypt = true;
+                RingConfig.getInstance().save();
+                sendMessage(client, "§aAlways Encrypt (own Messages): " + (RingConfig.getInstance().alwaysEncrypt ? "§2On" : "§4Off"));
+            }else if(args[1].equalsIgnoreCase("off")) {
+                RingConfig.getInstance().alwaysEncrypt = false;
+                RingConfig.getInstance().save();
+                sendMessage(client, "§aAlways Encrypt (own Messages): " + (RingConfig.getInstance().alwaysEncrypt ? "§2On" : "§4Off"));
             }else {
                 sendMessage(client, "§cPlease specify either \"On\" or \"Off\"!");
             }

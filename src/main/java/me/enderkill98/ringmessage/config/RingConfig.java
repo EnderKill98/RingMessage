@@ -20,5 +20,6 @@ public class RingConfig {
 
     public HashSet<String> ringMembers = new HashSet<>();
     public boolean debug = false;
+    public boolean alwaysEncrypt = false;
 
 }
