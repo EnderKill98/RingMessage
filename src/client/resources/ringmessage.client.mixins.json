@@ -1,9 +1,10 @@
 {
 	"required": true,
-	"package": "com.example.mixin.client",
+	"package": "me.enderkill98.ringmessage.mixin.client",
 	"compatibilityLevel": "JAVA_17",
 	"client": [
-		"ExampleClientMixin"
+		"ReceiveMessageMixin",
+		"SendMessageMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -1,31 +1,27 @@
 {
 	"schemaVersion": 1,
-	"id": "modid",
+	"id": "ringmessage",
 	"version": "${version}",
-	"name": "Example mod",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"name": "Ring Message",
+	"description": "Funny DMs by sending DMs in a Ring",
 	"authors": [
-		"Me!"
+		"EnderKill98"
 	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
 	"license": "CC0-1.0",
-	"icon": "assets/modid/icon.png",
+	"icon": "assets/ringmessage/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.example.ExampleMod"
+			"me.enderkill98.ringmessage.MainMod"
 		],
 		"client": [
-			"com.example.ExampleModClient"
+			"me.enderkill98.ringmessage.ClientMod"
 		]
 	},
 	"mixins": [
-		"modid.mixins.json",
+		"ringmessage.mixins.json",
 		{
-			"config": "modid.client.mixins.json",
+			"config": "ringmessage.client.mixins.json",
 			"environment": "client"
 		}
 	],
