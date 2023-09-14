@@ -40,6 +40,7 @@ public class RingMessageCommand {
                 Ring.OrderedMemberRing ring = RingMessage.createNewRing(client);
                 RingMessage.sendNewRingSyncMembersMessage(client, ring, RingConfig.getInstance().ringMembers);
                 sendMessage(client, "§aSent own member list to other members.");
+                return;
             }else if(args[1].equalsIgnoreCase("set") || args[1].equalsIgnoreCase("setForAll")) {
                 if(args.length == 2 && !args[1].equalsIgnoreCase("setForAll")) {
                     RingConfig.getInstance().ringMembers.clear();
