@@ -1,7 +1,6 @@
 package me.enderkill98.ringmessage;
 
 import me.enderkill98.ringmessage.config.RingConfig;
-import me.enderkill98.ringmessage.util.RingMessage;
 import me.enderkill98.ringmessage.util.StringUtil;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
@@ -60,7 +59,8 @@ public class RingMessageCommand {
 
         if(args[0].equalsIgnoreCase("send")) {
             String message = StringUtil.join(" ", " ", Arrays.stream(args).skip(1));
-            RingMessage.sendNewRingMessage(client, message);
+            if(!RingMessage.sendNewRingMessage(client, message))
+                sendMessage(client, "§cFailed to send off message. See logs for more!");
             return;
         }
 

@@ -3,7 +3,7 @@ package me.enderkill98.ringmessage.mixin.client;
 import me.enderkill98.ringmessage.ClientMod;
 import me.enderkill98.ringmessage.config.RingConfig;
 import me.enderkill98.ringmessage.util.NoChatReportsUtil;
-import me.enderkill98.ringmessage.util.RingMessage;
+import me.enderkill98.ringmessage.RingMessage;
 import me.enderkill98.ringmessage.util.StringUtil;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.hud.MessageIndicator;
