@@ -54,22 +54,8 @@ public class ReceiveMessageMixin {
         if(sender == null || content == null) return;
         System.out.println("Sender: \"" + sender + "\", Content: \"" + content + "\"");
 
-        NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo = null;
-        if(NoChatReportsUtil.isModAvailable()) {
-            if(NoChatReportsUtil.supportsDecryptDetailed()) {
-                Optional<NoChatReportsUtil.DetailedDecryptionInfo> decryptionInfo = NoChatReportsUtil.tryDecryptDetailed(content);
-                if(decryptionInfo.isPresent()) {
-                    content = decryptionInfo.get().decryptedText();
-                    ncrDecryptionInfo = decryptionInfo.get();
-                }
-            }else {
-                // Most likely using official mod, which doesn't have the custom decryptDetailed() method
-                String maybeDecrypted = NoChatReportsUtil.decrypt(content);
-                if(maybeDecrypted != null) content = maybeDecrypted;
-            }
-        }
         if(!content.contains("[rm")) return;
-        if(RingMessage.handleReceivedMessage(sender, content, ncrDecryptionInfo)) {
+        if(RingMessage.handleReceivedMessage(sender, content)) {
             if(!RingConfig.getInstance().debug)
                 info.cancel();
         }
