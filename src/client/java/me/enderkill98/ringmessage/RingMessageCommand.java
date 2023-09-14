@@ -11,7 +11,7 @@ import java.util.HashMap;
 public class RingMessageCommand {
 
     private void sendUsage(MinecraftClient client, String cmdName) {
-        sendMessage(client, "§eUsage: $" + cmdName + " <members <show/set/setForAll ...>/send <message...>/debug [on/off]/alwaysEncrypt [on/off]/test <Member>/directUse [on/off]>");
+        sendMessage(client, "§eUsage: $" + cmdName + " <members <show/set/setForAll/sync ...>/send <message...>/debug [on/off]/alwaysEncrypt [on/off]/test <Member>/directUse [on/off]>");
     }
 
     private void sendMessage(MinecraftClient client, String message) {
@@ -36,6 +36,10 @@ public class RingMessageCommand {
             if(args[1].equalsIgnoreCase("show")) {
                 sendMessage(client, "§aMembers: §2" + StringUtil.joinCommaSeparated(RingConfig.getInstance().ringMembers));
                 return;
+            }else if(args[1].equalsIgnoreCase("sync")) {
+                Ring.OrderedMemberRing ring = RingMessage.createNewRing(client);
+                RingMessage.sendNewRingSyncMembersMessage(client, ring, RingConfig.getInstance().ringMembers);
+                sendMessage(client, "§aSent own member list to other members.");
             }else if(args[1].equalsIgnoreCase("set") || args[1].equalsIgnoreCase("setForAll")) {
                 if(args.length == 2 && !args[1].equalsIgnoreCase("setForAll")) {
                     RingConfig.getInstance().ringMembers.clear();
