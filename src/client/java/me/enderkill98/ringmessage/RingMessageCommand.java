@@ -11,7 +11,7 @@ import java.util.Arrays;
 public class RingMessageCommand {
 
     private void sendUsage(MinecraftClient client, String cmdName) {
-        sendMessage(client, "§eUsage: $" + cmdName + " <members <show/set ...>/send <message...>>");
+        sendMessage(client, "§eUsage: $" + cmdName + " <members <show/set ...>/send <message...>/debug [on/off]>");
     }
 
     private void sendMessage(MinecraftClient client, String message) {
@@ -61,6 +61,27 @@ public class RingMessageCommand {
         if(args[0].equalsIgnoreCase("send")) {
             String message = StringUtil.join(" ", " ", Arrays.stream(args).skip(1));
             RingMessage.sendNewRingMessage(client, message);
+            return;
+        }
+
+        if(args[0].equalsIgnoreCase("debug")) {
+            if(args.length == 1) {
+                sendMessage(client, "§aDebug: " + (RingConfig.getInstance().debug ? "§2On" : "§4Off"));
+                sendUsage(client, cmdName);
+                return;
+            }
+
+            if(args[1].equalsIgnoreCase("on")) {
+                RingConfig.getInstance().debug = true;
+                RingConfig.getInstance().save();
+                sendUsage(client, "§aDebug: " + (RingConfig.getInstance().debug ? "§2On" : "§4Off"));
+            }else if(args[1].equalsIgnoreCase("off")) {
+                RingConfig.getInstance().debug = false;
+                RingConfig.getInstance().save();
+                sendUsage(client, "§aDebug: " + (RingConfig.getInstance().debug ? "§2On" : "§4Off"));
+            }else {
+                sendMessage(client, "§cPlease specify either \"On\" or \"Off\"!");
+            }
             return;
         }
 

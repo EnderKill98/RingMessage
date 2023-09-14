@@ -16,12 +16,8 @@ public class RingMessage {
     private static Random RNG = new Random();
     private static String letterDict = "abcdefghijklmnopqrstuvwxyz" + "abcdefghijklmnopqrstuvwxyz".toUpperCase() + "0123456789";
 
-
-    public static boolean handleReceivedMessage(String senderUserName, Text message) {
-        return handleReceivedMessage(senderUserName, message.getString());
-    }
-
-    public static boolean handleReceivedMessage(@Nullable String receivedFromUserName, String messageStr) {
+    public static boolean handleReceivedMessage(@Nullable String receivedFromUserName, String messageStr,
+                                                @Nullable NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo) {
         if(RingConfig.getInstance().ringMembers.isEmpty()) {
             System.err.println("[RingMessage] Failed to handle Ring message: No members configured!");
             return false;
@@ -92,8 +88,26 @@ public class RingMessage {
         @Nullable String nextMember = findNextMember(senderUserName, client.getSession().getUsername(), onlineMembers, hashModification);
         if(nextMember != null) {
             String fullMessage = " [" + headerPart + "]" + messagePart;
-            if(NoChatReportsUtil.isModAvailable() && NoChatReportsUtil.isEnabled())
-                fullMessage = NoChatReportsUtil.encrypt(fullMessage);
+            if(NoChatReportsUtil.isModAvailable()) {
+                // (Re-)encrypt if suitable
+
+                if(!NoChatReportsUtil.supportsDecryptDetailed() && NoChatReportsUtil.isEnabled()) {
+                    // Does not support finding out the details of how a message got delivered,
+                    // since using official mod. Encrypting with own defaults if mod is active.
+                    fullMessage = NoChatReportsUtil.encrypt(fullMessage);
+                }
+                if(NoChatReportsUtil.supportsDecryptDetailed() && ncrDecryptionInfo != null) {
+                    // Received message was encrypted with given details. Use same params for sending along
+                    // Prefer to compress if sender also compressed but use own defaults (all compressions should work rn on the mod)
+                    fullMessage = NoChatReportsUtil.encryptAndCompress(ncrDecryptionInfo.keyIndex(), ncrDecryptionInfo.encapsulation(),
+                            "/msg " + nextMember + " ", fullMessage,
+                            ncrDecryptionInfo.compression() != null ? NoChatReportsUtil.CompressionPolicy.Preferred : NoChatReportsUtil.CompressionPolicy.Never,
+                            null /* = Auto Determine */);
+                }
+            }
+            if(!RingConfig.getInstance().debug)
+                // Hide sent message confirmation
+                ClientMod.INSTANCE.hideSentFullMessages.put(fullMessage.trim(), System.currentTimeMillis() + 5000);
             ChatUtil.sendCommand(client, "msg " + nextMember + " " + fullMessage);
         }
         return true;
@@ -161,6 +175,9 @@ public class RingMessage {
             String fullMessage = " [rm:s=" + client.getSession().getUsername() + ":h=" + hashModification + "]" + message;
             if(NoChatReportsUtil.isModAvailable() && NoChatReportsUtil.isEnabled())
                 fullMessage = NoChatReportsUtil.encrypt(fullMessage);
+            if(!RingConfig.getInstance().debug)
+                // Hide sent message confirmation
+                ClientMod.INSTANCE.hideSentFullMessages.put(fullMessage.trim(), System.currentTimeMillis() + 5000);
             ChatUtil.sendCommand(client, "msg " + nextMember + " " + fullMessage);
             client.player.sendMessage(Text.of(ClientMod.PREFIX + "§2" + client.getSession().getUsername() + " » §a" + message));
         }else {

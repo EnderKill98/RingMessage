@@ -171,6 +171,16 @@ public class NoChatReportsUtil {
         }
     }
 
+    public static boolean supportsDecryptDetailed() {
+        try {
+            Class encryptionUtilClass = Class.forName("com.aizistral.nochatreports.common.core.EncryptionUtil");
+            encryptionUtilClass.getDeclaredMethod("tryDecryptDetailed", String.class);
+            return true;
+        }catch (ClassNotFoundException | NoSuchMethodException ex) {
+            return false;
+        }
+    }
+
     public static Optional<DetailedDecryptionInfo> tryDecryptDetailed(String maybeEncrypted) {
         try {
             Class encryptionUtilClass = Class.forName("com.aizistral.nochatreports.common.core.EncryptionUtil");
