@@ -13,6 +13,8 @@ public class SendMessageMixin {
 
     @Inject(at = @At("HEAD"), method = "sendMessage(Ljava/lang/String;Z)Z", cancellable = true)
     private void sendMessage(String chatText, boolean addToHistory, CallbackInfoReturnable<Boolean> info) {
+        if(chatText.startsWith("$ "))
+            chatText = "$rmsg send " + chatText.substring("$ ".length());
         if(chatText.equalsIgnoreCase("$rmsg") || chatText.toLowerCase().startsWith("$rmsg ")
                 || chatText.equalsIgnoreCase("$ringmsg") || chatText.toLowerCase().startsWith("$ringmsg ")) {
 
