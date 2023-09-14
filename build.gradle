@@ -22,7 +22,7 @@ loom {
     splitEnvironmentSourceSets()
 
 	mods {
-		"modid" {
+		"ringmessage" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
