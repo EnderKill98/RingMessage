@@ -14,6 +14,7 @@ public class SendMessageMixin {
 
     @Inject(at = @At("HEAD"), method = "sendMessage(Ljava/lang/String;Z)Z", cancellable = true)
     private void sendMessage(String chatText, boolean addToHistory, CallbackInfoReturnable<Boolean> info) {
+        final String origChatText = chatText;
         if(chatText.startsWith("$ "))
             chatText = "$rmsg send " + chatText.substring("$ ".length());
         if(chatText.equalsIgnoreCase("$rmsg") || chatText.toLowerCase().startsWith("$rmsg ")
@@ -24,14 +25,14 @@ public class SendMessageMixin {
 
             ClientMod.INSTANCE.ringMessageCommand.onExecute(cmdName, args);
 
-            if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(chatText);
+            if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
             info.setReturnValue(true); // Close chat screen and prevent further handling
         } else if(RingConfig.getInstance().directUse && !chatText.startsWith("/") && !chatText.startsWith(".") && !chatText.startsWith("#")) {
             chatText = "send " + chatText;
             String[] args = chatText.contains(" ") ? chatText.split(" ") : new String[]{chatText};
             ClientMod.INSTANCE.ringMessageCommand.onExecute("rmsg", args);
 
-            if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(chatText);
+            if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
             info.setReturnValue(true);
         }
     }
