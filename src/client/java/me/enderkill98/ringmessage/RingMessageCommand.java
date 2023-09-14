@@ -11,7 +11,7 @@ import java.util.Arrays;
 public class RingMessageCommand {
 
     private void sendUsage(MinecraftClient client, String cmdName) {
-        sendMessage(client, "§eUsage: $" + cmdName + " <members,send> [show/set]");
+        sendMessage(client, "§eUsage: $" + cmdName + " <members <show/set ...>/send <message...>>");
     }
 
     private void sendMessage(MinecraftClient client, String message) {
