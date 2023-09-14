@@ -42,7 +42,6 @@ public class ReceiveMessageMixin {
             return;
         }
 
-        System.out.println("Test: " + messageStr);
         String sender = null, content = null;
         if(messageStr.startsWith("[") && messageStr.contains(" -> me]")) {
             sender = messageStr.split(" ")[0].substring(1);

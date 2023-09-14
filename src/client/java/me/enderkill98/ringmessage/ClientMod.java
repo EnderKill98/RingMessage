@@ -3,6 +3,7 @@ package me.enderkill98.ringmessage;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,10 +18,12 @@ public class ClientMod implements ClientModInitializer, ClientTickEvents.EndTick
 	public RingMessageCommand ringMessageCommand = new RingMessageCommand();
 
 	public HashMap<String, Long/*Cleanup after Timestamp Millis*/> hideSentFullMessages = new HashMap<>();
+	public HashMap<Integer /*Message hash*/, Long/*Cleanup after Timestamp Millis*/> expectConfirmationUntil = new HashMap<>();
 
 	@Override
 	public void onInitializeClient() {
 		INSTANCE = this;
+		ClientTickEvents.END_CLIENT_TICK.register(this);
 	}
 
 	@Override
@@ -32,5 +35,18 @@ public class ClientMod implements ClientModInitializer, ClientTickEvents.EndTick
 				removeMessages.add(entry.getKey());
 		}
 		removeMessages.forEach(hideSentFullMessages::remove);
+
+		// Find unconfirmed messages and notify user
+		ArrayList<Integer> stillNotConfirmed = new ArrayList<>();
+		for(Map.Entry<Integer, Long> entry : expectConfirmationUntil.entrySet()) {
+			if(entry.getValue() < System.currentTimeMillis())
+				stillNotConfirmed.add(entry.getKey());
+		}
+		for(Integer unconfirmedHash : stillNotConfirmed) {
+			System.err.println("[RingMessage] A message you sent timed out (message hash: " + unconfirmedHash + ")!");
+			if(client.player != null)
+				client.player.sendMessage(Text.of(PREFIX + "§4A message you just sent might not have reached everyone who is online!"));
+			expectConfirmationUntil.remove(unconfirmedHash);
+		}
 	}
 }

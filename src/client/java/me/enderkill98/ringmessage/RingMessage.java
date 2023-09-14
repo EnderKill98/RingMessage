@@ -58,9 +58,6 @@ public class RingMessage {
             return false;
         }
 
-        @Nullable String hashModification = null;
-        if(headerFields.containsKey("h")) // Hash Modification
-            hashModification = headerFields.get("h");
         String senderUserName;
         if(headerFields.containsKey("s")) // Hash Modification
             senderUserName = headerFields.get("s");
@@ -76,9 +73,10 @@ public class RingMessage {
 
         // Todo verify own hash was correct (so sender was rightfully sending to self)
 
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;
-        if(player != null)
-            player.sendMessage(Text.of(ClientMod.PREFIX + "§2" + (senderUserName != null ? senderUserName : "§onull") + "§2 » §a" + messagePart));
+        @Nullable String hashModification = null;
+        if(headerFields.containsKey("h")) // Hash Modification
+            hashModification = headerFields.get("h");
+
         MinecraftClient client = MinecraftClient.getInstance();
         HashSet<String> onlineMembers = Ring.getOnlineMembers(client, RingConfig.getInstance().ringMembers);
         Ring.OrderedMemberRing ring = Ring.OrderedMemberRing.ofOnlineMembers(onlineMembers, client.getSession().getUsername(), hashModification);
@@ -87,9 +85,82 @@ public class RingMessage {
             return false;
         }
 
+        if(headerFields.containsKey("syncmembers")) {
+            return handleReceivedMessageSyncMembers(client, ncrDecryptionInfo, headerFields, ring, messagePart);
+        } else if(headerFields.containsKey("basictest")) {
+                return handleReceivedBasicTestMessage(client, ncrDecryptionInfo, headerFields, ring, messagePart);
+        } else if(!messagePart.isEmpty()) {
+            return handleReceivedMessageChat(client, ncrDecryptionInfo, headerFields, ring, messagePart);
+        }
+        return true;
+    }
+
+    public static boolean handleReceivedMessageSyncMembers(MinecraftClient client, NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo, HashMap<String, String> headerFields, Ring.OrderedMemberRing ring, String message) {
+        String senderUserName = headerFields.get("s"); // Was checked to exist earlier
+        String newRawMemberList = headerFields.get("syncmembers");
+        if(newRawMemberList.isBlank()) {
+            System.err.println("[RingMessage] Someone attempted (" + senderUserName + "?) to clear out all members!");
+            return false;
+        }
+        System.out.println("[RingMessage] Got Sync Members Message from presumably " + senderUserName + ": " + newRawMemberList);
+
+        // Pass along based on old ring
+        if(shouldHandle(client, ring, ncrDecryptionInfo, headerFields, message, true)) {
+            String[] newMembers = newRawMemberList.contains(",") ? newRawMemberList.split(",") : new String[] { newRawMemberList };
+            RingConfig.getInstance().ringMembers.clear();
+            Arrays.stream(newMembers).forEach(RingConfig.getInstance().ringMembers::add);
+            RingConfig.getInstance().save();
+
+            ClientPlayerEntity player = MinecraftClient.getInstance().player;
+            if(player != null)
+                player.sendMessage(Text.of(ClientMod.PREFIX + "§2" + senderUserName + "§e updated the Members to: §6" + StringUtil.joinCommaSeparated(RingConfig.getInstance().ringMembers)));
+        }
+        return true;
+    }
+
+    public static boolean handleReceivedBasicTestMessage(MinecraftClient client, NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo, HashMap<String, String> headerFields, Ring.OrderedMemberRing ring, String message) {
+        String senderUserName = headerFields.get("s"); // Was checked to exist earlier
+        System.out.println("[RingMessage] Got Chat Message from presumably " + senderUserName + ": " + message);
+
+        HashSet<String> twoMembers = new HashSet<>();
+        twoMembers.add(client.getSession().getUsername());
+        twoMembers.add(senderUserName);
+        Ring.OrderedMemberRing twoMemberRing = Ring.OrderedMemberRing.ofOnlineMembers(twoMembers, null, ring.getUsedHashModification());
+
+        int messageHash = hashOfMessage(headerFields, message);
+        if(ClientMod.INSTANCE.expectConfirmationUntil.containsKey(messageHash)) {
+            if(client.player != null)
+                client.player.sendMessage(Text.of(ClientMod.PREFIX + "§aTest successful!"));
+        }
+
+        if(shouldHandle(client, twoMemberRing, ncrDecryptionInfo, headerFields, message, true))
+            System.out.println("[RingMessage] " + senderUserName + " (presumably) probed you with a basic test.");
+        return true;
+    }
+
+    public static boolean handleReceivedMessageChat(MinecraftClient client, NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo, HashMap<String, String> headerFields, Ring.OrderedMemberRing ring, String message) {
+        String senderUserName = headerFields.get("s"); // Was checked to exist earlier
+        System.out.println("[RingMessage] Got Chat Message from presumably " + senderUserName + ": " + message);
+
+        if(shouldHandle(client, ring, ncrDecryptionInfo, headerFields, message, true)) {
+            ClientPlayerEntity player = MinecraftClient.getInstance().player;
+            if(player != null)
+                player.sendMessage(Text.of(ClientMod.PREFIX + "§2" + senderUserName + "§2 » §a" + message));
+        }
+        return true;
+    }
+
+    public static boolean shouldHandle(MinecraftClient client, Ring.OrderedMemberRing ring, NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo, HashMap<String, String> headerFields, String message, boolean passAlong) {
+        String senderUserName = headerFields.get("s"); // Was checked to exist earlier
+
         String nextMember = ring.after(client.getSession().getUsername());
-        if(!senderUserName.equalsIgnoreCase(client.getSession().getUsername())) {
-            String fullMessage = " [" + headerPart + "]" + messagePart;
+        if(nextMember == null) {
+            System.err.println("[RingMessage] Unexcpected! Couldn't pass a message to next member!");
+            return false;
+        }
+
+        if(!senderUserName.equalsIgnoreCase(client.getSession().getUsername()) && passAlong) {
+            String fullMessage = encodeHeader(headerFields, true) + message;
             if(NoChatReportsUtil.isModAvailable()) {
                 // (Re-)encrypt if suitable
 
@@ -114,10 +185,26 @@ public class RingMessage {
                 ChatUtil.sendCommand(client, fullMessage);
             else
                 ChatUtil.sendCommand(client, "msg " + nextMember + " " + fullMessage);
-        }else {
+            System.out.println("[RingMessage] Passed Message along to " + nextMember);
+            return true;
+        }else if (passAlong) {
+            if(RingConfig.getInstance().debug && client.player != null)
+                client.player.sendMessage(Text.of(ClientMod.PREFIX + "§oYour message was received by everyone."));
+            int messageHash = hashOfMessage(headerFields, message);
+            if(ClientMod.INSTANCE.expectConfirmationUntil.containsKey(messageHash)) {
+                MainMod.LOGGER.info("[RingMessage] Message with Message Hash" + messageHash + " was successfully sent to everyone!");
+                ClientMod.INSTANCE.expectConfirmationUntil.remove(messageHash); // Prevent timeout
+            } else {
+                MainMod.LOGGER.info("[RingMessage] Message with Message Hash" + messageHash + " was successfully sent to everyone!");
+                if(client.player != null)
+                    client.player.sendMessage(Text.of(ClientMod.PREFIX + "§eRe-received a message that was not expected (confirmation already timed out or forged message)!"));
+            }
+
             // Got confirmation from last user in ring!
+            return false;
+        }else {
+            return true;
         }
-        return true;
     }
 
     public static String escapeHeaderValue(String headerValue) {
@@ -173,32 +260,69 @@ public class RingMessage {
         return headerFields;
     }
 
-    public static boolean sendNewRingMessage(MinecraftClient client, String message) {
+    public static String generateHashModification() {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < 6; i++)
+            builder.append(letterDict.charAt(RNG.nextInt(letterDict.length())));
+        return builder.toString();
+    }
+
+    public static Ring.OrderedMemberRing createNewRing(MinecraftClient client) {
         HashSet<String> onlineMembers = Ring.getOnlineMembers(client, RingConfig.getInstance().ringMembers);
-        System.out.println("Online Members: " + StringUtil.joinCommaSeparated(onlineMembers));
+        //System.out.println("Online Members: " + StringUtil.joinCommaSeparated(onlineMembers));
         Ring.OrderedMemberRing ring = null;
         int attempts = 0;
 
         while(ring == null) {
             attempts++;
-            String hashModification = "";
-            for (int i = 0; i < 6; i++)
-                hashModification += letterDict.charAt(RNG.nextInt(letterDict.length()));
+            String hashModification = generateHashModification();
             ring = Ring.OrderedMemberRing.ofOnlineMembers(onlineMembers, client.getSession().getUsername(), hashModification);
             if(ring == null)
                 System.err.println("[RingMessage] Failed to create ring! Likely hash collision! (Attempt " + attempts + ")");
             if(attempts >= 10) {
                 System.err.println("[RingMessage] Ran out of attempts, creating a ring!");
-                return false;
+                return null;
             }
         }
 
+        return ring;
+    }
+
+    public static boolean sendNewRingChatMessage(MinecraftClient client, Ring.OrderedMemberRing ring, String message) {
+        if(sendNewRawRingMessage(client, ring, null, message)) {
+            client.player.sendMessage(Text.of(ClientMod.PREFIX + "§2" + client.getSession().getUsername() + " » §a" + message));
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean sendNewRingSyncMembersMessage(MinecraftClient client, Ring.OrderedMemberRing ring, HashSet<String> newMembers) {
+        HashMap<String, String> headerFields = new HashMap<>();
+        headerFields.put("syncmembers", StringUtil.join(",", ",", newMembers));
+        return sendNewRawRingMessage(client, ring, headerFields, null);
+    }
+
+    public static boolean sendNewRingBasicTestMessage(MinecraftClient client, String targetMember) {
+        HashSet<String> twoMembers = new HashSet<>();
+        twoMembers.add(client.getSession().getUsername());
+        twoMembers.add(targetMember);
+        Ring.OrderedMemberRing twoMemberRing = Ring.OrderedMemberRing.ofOnlineMembers(twoMembers, null, generateHashModification());
+
+        HashMap<String, String> headerFields = new HashMap<>();
+        headerFields.put("basictest", "");
+        return sendNewRawRingMessage(client, twoMemberRing, headerFields, null);
+    }
+
+    public static boolean sendNewRawRingMessage(MinecraftClient client, Ring.OrderedMemberRing ring, HashMap<String, @Nullable String> extraHeaderFields, @Nullable String message) {
+        if(message == null) message = "";
+        if(extraHeaderFields == null) extraHeaderFields = new HashMap<>();
         String nextMember = ring.after(client.getSession().getUsername());
 
         HashMap<String, String> headerFields = new HashMap<>();
         headerFields.put("s", client.getSession().getUsername());
         if(ring.getUsedHashModification() != null)
             headerFields.put("h", ring.getUsedHashModification());
+        headerFields.putAll(extraHeaderFields);
 
         String fullMessage = encodeHeader(headerFields, true) + message;
         if(NoChatReportsUtil.isModAvailable() && (NoChatReportsUtil.isEnabled() || RingConfig.getInstance().alwaysEncrypt))
@@ -206,8 +330,29 @@ public class RingMessage {
         if(!RingConfig.getInstance().debug)
             // Hide sent message confirmation
             ClientMod.INSTANCE.hideSentFullMessages.put(fullMessage.trim(), System.currentTimeMillis() + 5000);
+        int messageHash = hashOfMessage(headerFields, message);
         ChatUtil.sendCommand(client, "msg " + nextMember + " " + fullMessage);
-        client.player.sendMessage(Text.of(ClientMod.PREFIX + "§2" + client.getSession().getUsername() + " » §a" + message));
+
+        System.out.println("[RingMessage] Sent a new message with Message Hash " + messageHash + ": " + encodeHeader(headerFields, true) + message);
+        ClientMod.INSTANCE.expectConfirmationUntil.put(messageHash, System.currentTimeMillis() + 1000L + ring.getRing().length * 300L);
         return true;
+    }
+
+    public static int hashOfMessage(HashMap<String, String> headerFields, String message) {
+        if(message == null) message = "";
+        message = message.trim();
+
+        StringBuilder hashStringBuilder = new StringBuilder(message + "\0");
+
+        ArrayList<String> headerKeys = new ArrayList<>(headerFields.keySet());
+        Collections.sort(headerKeys);
+        for(String key : headerKeys) {
+            hashStringBuilder.append(key);
+            hashStringBuilder.append('\0');
+            hashStringBuilder.append(headerFields.get(key));
+            hashStringBuilder.append('\0');
+        }
+
+        return hashStringBuilder.toString().hashCode();
     }
 }
