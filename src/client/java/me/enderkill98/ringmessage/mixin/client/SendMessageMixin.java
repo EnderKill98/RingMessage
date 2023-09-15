@@ -5,18 +5,40 @@ import me.enderkill98.ringmessage.config.RingConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ChatScreen.class)
-public class SendMessageMixin {
+public abstract class SendMessageMixin {
+
+    @Shadow public abstract String normalize(String chatText);
 
     @Inject(at = @At("HEAD"), method = "sendMessage(Ljava/lang/String;Z)Z", cancellable = true)
     private void sendMessage(String chatText, boolean addToHistory, CallbackInfoReturnable<Boolean> info) {
         final String origChatText = chatText;
-        if(chatText.startsWith("$ "))
+        if (chatText.startsWith("$ ")) {
+            if(RingConfig.getInstance().directUse){
+                if(MinecraftClient.getInstance().player == null){
+                    info.setReturnValue(true);
+                    return;
+                }
+                chatText = chatText.substring("$ ".length());
+                chatText = normalize(chatText);
+                if (chatText.isEmpty()) {
+                    info.setReturnValue(true);
+                } else {
+                    if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
+
+                    MinecraftClient.getInstance().player.networkHandler.sendChatMessage(chatText);
+
+                    info.setReturnValue(true);
+                }
+                return;
+            }
             chatText = "$rmsg send " + chatText.substring("$ ".length());
+        }
         if(chatText.equalsIgnoreCase("$rmsg") || chatText.toLowerCase().startsWith("$rmsg ")
                 || chatText.equalsIgnoreCase("$ringmsg") || chatText.toLowerCase().startsWith("$ringmsg ")) {
 
