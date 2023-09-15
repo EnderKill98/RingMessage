@@ -6,7 +6,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 
 import java.util.Arrays;
-import java.util.HashMap;
 
 public class RingMessageCommand {
 
