@@ -18,6 +18,7 @@ public class RingMessageCommand {
         sendMessage(client, "§2» §a$" + cmdName + " alwaysEncrypt [on/off] §o(with NoChatReports)", false);
         sendMessage(client, "§2» §a$" + cmdName + " test <Member>", false);
         sendMessage(client, "§2» §a$" + cmdName + " directUse [on/off]>", false);
+        sendMessage(client, "§2» §a$" + cmdName + " version", false);
     }
 
     private void sendMessage(MinecraftClient client, String message) {
@@ -201,7 +202,12 @@ public class RingMessageCommand {
             return;
         }
 
-        sendUsage(client, cmdName);
+        if(args[0].equalsIgnoreCase("version")) {
+            sendMessage(client, "§aMod Version: §2" + ClientMod.MOD_VERSION + "§a, Protocol Version: §2" + RingMessage.PROTOCOL_VERSION);
+            return;
+        }
+
+            sendUsage(client, cmdName);
     }
 
 }
