@@ -40,8 +40,9 @@ public class RingMessageCommand {
                 RingMessage.sendNewRingSyncMembersMessage(client, ring, RingConfig.getInstance().ringMembers);
                 sendMessage(client, "§aSent own member list to other members.");
                 return;
-            }else if(args[1].equalsIgnoreCase("set") || args[1].equalsIgnoreCase("setForAll")) {
-                if(args.length == 2 && !args[1].equalsIgnoreCase("setForAll")) {
+            }else if(args[1].equalsIgnoreCase("set") || args[1].equalsIgnoreCase("setForAll") || args[1].equalsIgnoreCase("setAndSync")) {
+                boolean alsoSync = args[1].equalsIgnoreCase("setForAll") || args[1].equalsIgnoreCase("setAndSync");
+                if(args.length == 2 && !alsoSync) {
                     RingConfig.getInstance().ringMembers.clear();
                     RingConfig.getInstance().save();
                     sendMessage(client, "§aCleared Members.");
@@ -52,16 +53,58 @@ public class RingMessageCommand {
                     while(remainingArgs.contains("  "))
                         remainingArgs = remainingArgs.replace("  ", " ");
 
-                    Ring.OrderedMemberRing ring = args[1].equalsIgnoreCase("setForAll") ? RingMessage.createNewRing(client) : null;
+                    Ring.OrderedMemberRing ring = alsoSync ? RingMessage.createNewRing(client) : null;
 
                     String[] members = remainingArgs.contains(" ") ? remainingArgs.split(" ") : new String[] { remainingArgs };
                     RingConfig.getInstance().ringMembers.clear();
                     RingConfig.getInstance().ringMembers.addAll(Arrays.asList(members));
                     RingConfig.getInstance().save();
-                    sendMessage(client, "§aSet" + (ring == null ? "" : " and sent") + " Members: §2" + StringUtil.joinCommaSeparated(RingConfig.getInstance().ringMembers));
-
                     if(ring != null)
                         RingMessage.sendNewRingSyncMembersMessage(client, ring, RingConfig.getInstance().ringMembers);
+                    sendMessage(client, "§aSet" + (ring == null ? "" : " and sent") + " Members: §2" + StringUtil.joinCommaSeparated(RingConfig.getInstance().ringMembers));
+                    return;
+                }
+            }else if(args[1].equalsIgnoreCase("add") || args[1].equalsIgnoreCase("addAndSync")) {
+                if(args.length == 3) {
+                    boolean alsoSync = args[1].equalsIgnoreCase("addAndSync");
+                    String newMember = args[2];
+                    if(Ring.contains(RingConfig.getInstance().ringMembers, newMember)) {
+                        sendMessage(client, "§cThat member is already in your list!");
+                        return;
+                    }
+
+                    Ring.OrderedMemberRing ring = alsoSync ? RingMessage.createNewRing(client) : null;
+
+                    RingConfig.getInstance().ringMembers.add(newMember);
+                    RingConfig.getInstance().save();
+                    if(ring != null)
+                        RingMessage.sendNewRingSyncMembersMessage(client, ring, RingConfig.getInstance().ringMembers);
+                    sendMessage(client, "§aAdded" + (ring == null ? "" : " and sent") + " Member §2" + newMember);
+                    return;
+                }
+            }else if(args[1].equalsIgnoreCase("rm") || args[1].equalsIgnoreCase("rmAndSync")) {
+                if(args.length == 3) {
+                    boolean alsoSync = args[1].equalsIgnoreCase("rmAndSync");
+                    String oldMember = args[2];
+                    String oldMemberCorrectCasing = null;
+                    for(String member : RingConfig.getInstance().ringMembers) {
+                        if(member.equalsIgnoreCase(oldMember)) {
+                            oldMemberCorrectCasing = member;
+                            break;
+                        }
+                    }
+                    if(oldMemberCorrectCasing == null) {
+                        sendMessage(client, "§cMember not found in your list!");
+                        return;
+                    }
+
+                    Ring.OrderedMemberRing ring = alsoSync ? RingMessage.createNewRing(client) : null;
+
+                    RingConfig.getInstance().ringMembers.remove(oldMemberCorrectCasing);
+                    RingConfig.getInstance().save();
+                    if(ring != null)
+                        RingMessage.sendNewRingSyncMembersMessage(client, ring, RingConfig.getInstance().ringMembers);
+                    sendMessage(client, "§aRemoved Member §2" + oldMemberCorrectCasing + (ring == null ? "§a." : "§a and new list."));
                     return;
                 }
             }
