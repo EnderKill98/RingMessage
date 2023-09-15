@@ -127,18 +127,14 @@ public class RingMessageCommand {
                 sendMessage(client, "§cFailed to create new ring!");
                 return;
             }
-            if(!RingMessage.sendNewRingChatMessage(client, ring, message))
-                sendMessage(client, "§cFailed to send off message. See logs for more!");
+            RingMessage.sendNewRingChatMessage(client, ring, message);
             return;
         }
 
         if(args[0].equalsIgnoreCase("test") && args.length == 2) {
             String targetMember = args[1];
-            if(RingMessage.sendNewRingBasicTestMessage(client, targetMember)) {
-                sendMessage(client, "§eTesting §6" + targetMember + "§e...");
-            }else {
-                sendMessage(client, "§cFailed to send off test. See logs for more!");
-            }
+            RingMessage.sendNewRingBasicTestMessage(client, targetMember);
+            sendMessage(client, "§eTesting §6" + targetMember + "§e...");
             return;
         }
 

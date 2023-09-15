@@ -6,9 +6,13 @@ import me.enderkill98.ringmessage.util.NoChatReportsUtil;
 import me.enderkill98.ringmessage.util.StringUtil;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.text.*;
+import net.minecraft.util.Formatting;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 public class RingMessage {
@@ -153,14 +157,42 @@ public class RingMessage {
         return true;
     }
 
+    public static void showChatMessage(@NotNull ClientPlayerEntity player, String senderUserName, @Nullable String encryptionTooltip, String message) {
+        MutableText text = Text.of(ClientMod.PREFIX + "§2" + senderUserName).copy();
+        if(encryptionTooltip != null)
+            text.append(Text.literal(" 🔒").setStyle(Style.EMPTY.withColor(Formatting.GREEN).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.of(encryptionTooltip)))));
+        text.append(Text.literal(" »").setStyle(Style.EMPTY.withColor(Formatting.GREEN)));
+        text.append(Text.literal(" " + message).setStyle(Style.EMPTY.withColor(Formatting.GREEN)));
+        player.sendMessage(text);
+    }
+
     public static boolean handleReceivedMessageChat(MinecraftClient client, NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo, HashMap<String, String> headerFields, Ring.OrderedMemberRing ring, String message) {
         String senderUserName = headerFields.get("s"); // Was checked to exist earlier
-        System.out.println("[RingMessage] Got Chat Message from presumably " + senderUserName + ": " + message);
+        System.out.println("[RingMessage] Got Chat Message from presumably " + senderUserName + ": " + message + (ncrDecryptionInfo != null ? " (encrypted)" : ""));
 
         if(shouldHandle(client, ring, ncrDecryptionInfo, headerFields, message, true)) {
             ClientPlayerEntity player = MinecraftClient.getInstance().player;
-            if(player != null)
-                player.sendMessage(Text.of(ClientMod.PREFIX + "§2" + senderUserName + "§2 » §a" + message));
+            if(player != null) {
+                String encryptionTooltip = null;
+                if(NoChatReportsUtil.isModAvailable()) {
+                    if(ncrDecryptionInfo != null) {
+                        encryptionTooltip = "§a🔒 §a§nEncrypted with No Chat Reports§a 🔒\n\n" +
+                                "§a🔑 §2Key Index: §a" + ncrDecryptionInfo.keyIndex() + "\n" +
+                                "§a🎁 §2Encapsulation: §a" + ncrDecryptionInfo.encapsulation();
+                        if(ncrDecryptionInfo.compression() != null) {
+                            encryptionTooltip += "\n§a🗜 §2Compression: §a" + ncrDecryptionInfo.compression().getCompressionName();
+                            if(ncrDecryptionInfo.compressionRatio() == null)
+                                encryptionTooltip += "§2 (No Ratio!?!)";
+                            else
+                                encryptionTooltip += "§2 (Ratio: §a" + BigDecimal.valueOf(ncrDecryptionInfo.compressionRatio()).setScale(2, RoundingMode.HALF_UP) + "§a)";
+                        }
+                    }else {
+                        encryptionTooltip = "§a🔒 §a§nEncrypted with No Chat Reports§a 🔒\n\n§7Can't determine encryption details.\n§7Can only show details with this fork:\n§7github.com/EnderKill98/No-Chat-Reports";
+                    }
+                }
+
+                showChatMessage(player, senderUserName, encryptionTooltip, message);
+            }
         }
         return true;
     }
@@ -303,21 +335,26 @@ public class RingMessage {
         return ring;
     }
 
-    public static boolean sendNewRingChatMessage(MinecraftClient client, Ring.OrderedMemberRing ring, String message) {
-        if(sendNewRawRingMessage(client, ring, null, message)) {
-            client.player.sendMessage(Text.of(ClientMod.PREFIX + "§2" + client.getSession().getUsername() + " » §a" + message));
-            return true;
+    public static void sendNewRingChatMessage(MinecraftClient client, Ring.OrderedMemberRing ring, String message) {
+        boolean didEncrypt = sendNewRawRingMessage(client, ring, null, message);
+
+        if(client.player != null) {
+            String encryptionTooltip = """
+                    §a🔒 §a§nEncrypted with No Chat Reports§a 🔒
+
+                    §aYou encrypted this message with
+                    §ayour current settings.""";
+            showChatMessage(client.player, client.getSession().getUsername(), encryptionTooltip, message);
         }
-        return false;
     }
 
-    public static boolean sendNewRingSyncMembersMessage(MinecraftClient client, Ring.OrderedMemberRing ring, HashSet<String> newMembers) {
+    public static void sendNewRingSyncMembersMessage(MinecraftClient client, Ring.OrderedMemberRing ring, HashSet<String> newMembers) {
         HashMap<String, String> headerFields = new HashMap<>();
         headerFields.put("syncmembers", StringUtil.join(",", ",", newMembers));
-        return sendNewRawRingMessage(client, ring, headerFields, null);
+        sendNewRawRingMessage(client, ring, headerFields, null);
     }
 
-    public static boolean sendNewRingBasicTestMessage(MinecraftClient client, String targetMember) {
+    public static void sendNewRingBasicTestMessage(MinecraftClient client, String targetMember) {
         HashSet<String> twoMembers = new HashSet<>();
         twoMembers.add(client.getSession().getUsername());
         twoMembers.add(targetMember);
@@ -325,9 +362,12 @@ public class RingMessage {
 
         HashMap<String, String> headerFields = new HashMap<>();
         headerFields.put("basictest", "");
-        return sendNewRawRingMessage(client, twoMemberRing, headerFields, null);
+        sendNewRawRingMessage(client, twoMemberRing, headerFields, null);
     }
 
+    /**
+     * @return Whether message got encrypted
+     */
     public static boolean sendNewRawRingMessage(MinecraftClient client, Ring.OrderedMemberRing ring, HashMap<String, @Nullable String> extraHeaderFields, @Nullable String message) {
         if(message == null) message = "";
         if(extraHeaderFields == null) extraHeaderFields = new HashMap<>();
@@ -339,18 +379,21 @@ public class RingMessage {
             headerFields.put("h", ring.getUsedHashModification());
         headerFields.putAll(extraHeaderFields);
 
+        boolean didEncrypt = false;
         String fullMessage = encodeHeader(headerFields, true) + message;
-        if(NoChatReportsUtil.isModAvailable() && (NoChatReportsUtil.isEnabled() || RingConfig.getInstance().alwaysEncrypt) && message != null && !message.isBlank())
+        if(NoChatReportsUtil.isModAvailable() && (NoChatReportsUtil.isEnabled() || RingConfig.getInstance().alwaysEncrypt) && message != null && !message.isBlank()) {
             fullMessage = encodeHeader(headerFields, true) + NoChatReportsUtil.encrypt(message);
+            didEncrypt = true;
+        }
         if(!RingConfig.getInstance().debug)
             // Hide sent message confirmation
             ClientMod.INSTANCE.hideSentFullMessages.put(fullMessage.trim(), System.currentTimeMillis() + 5000);
         int messageHash = hashOfMessage(headerFields, message);
         ChatUtil.sendCommand(client, "msg " + nextMember + " " + fullMessage);
 
-        System.out.println("[RingMessage] Sent a new message with Message Hash " + messageHash + ": " + encodeHeader(headerFields, true) + message);
+        System.out.println("[RingMessage] Sent a new " + (didEncrypt ? ", encrypted " : "") + "message with Message Hash " + messageHash + ": " + encodeHeader(headerFields, true) + message);
         ClientMod.INSTANCE.expectConfirmationUntil.put(messageHash, System.currentTimeMillis() + 1000L + ring.getRing().length * 300L);
-        return true;
+        return didEncrypt;
     }
 
     public static int hashOfMessage(HashMap<String, String> headerFields, String message) {
