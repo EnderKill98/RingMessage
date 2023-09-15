@@ -8,6 +8,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,6 +17,8 @@ import java.math.RoundingMode;
 import java.util.*;
 
 public class RingMessage {
+
+    public static final int PROTOCOL_VERSION = 2;
 
     private static Random RNG = new Random();
     private static String letterDict = "abcdefghijklmnopqrstuvwxyz" + "abcdefghijklmnopqrstuvwxyz".toUpperCase() + "0123456789";
@@ -148,11 +151,74 @@ public class RingMessage {
 
         int messageHash = hashOfMessage(headerFields, message);
         if(ClientMod.INSTANCE.expectConfirmationUntil.containsKey(messageHash)) {
-            if(client.player != null)
-                client.player.sendMessage(Text.of(ClientMod.PREFIX + "§aTest successful!"));
+            if(client.player != null) {
+                String memberInfo;
+                String protocolInfo;
+                String modInfo;
+                if(headerFields.containsKey("pv")) { // Protocol Version
+                    if(!headerFields.get("pv").equals(PROTOCOL_VERSION + "")) {
+                        protocolInfo = "§6Protocol version differs (You: §e" + PROTOCOL_VERSION + "§6, Them: §e" + headerFields.get("pv") + "§6)";
+                    }else {
+                        protocolInfo = "§aSame protocol version.";
+                    }
+                } else
+                    protocolInfo = "§6No protocol version received.";
+                if(headerFields.containsKey("mv")) { // Mod Version
+                    if(!headerFields.get("mv").equals(ClientMod.MOD_VERSION)) {
+                        modInfo = "§6Mod version differs (You: §e" + ClientMod.MOD_VERSION + "§6, Them: §e" + headerFields.get("mv") + "§6)";
+                    }else {
+                        modInfo = "§aSame mod version.";
+                    }
+                } else
+                    modInfo = "§6No mod version received.";
+
+                if(headerFields.containsKey("memberlist")) {
+                    HashSet<String> otherMemberList = new HashSet<>(Arrays.asList(headerFields.get("memberlist").split(",")));
+
+                    ArrayList<String> otherIsMissingMembers = new ArrayList<>();
+                    ArrayList<String> otherHasExtraMembers = new ArrayList<>();
+
+                    for(String ownMember : RingConfig.getInstance().ringMembers) {
+                        if(!Ring.contains(otherMemberList, ownMember))
+                            otherIsMissingMembers.add(ownMember);
+                    }
+                    for(String otherMember : otherMemberList) {
+                        if(!Ring.contains(RingConfig.getInstance().ringMembers, otherMember))
+                            otherHasExtraMembers.add(otherMember);
+                    }
+
+                    if(!otherIsMissingMembers.isEmpty() && !otherHasExtraMembers.isEmpty())
+                        memberInfo = "§6Their Member List has §e" + StringUtil.join("§6, §e", "§6 and §e", otherHasExtraMembers) + "§6, which you don't have and are missing §e" + StringUtil.join("§6, §e", "§6 and §e", otherIsMissingMembers) + "§6!";
+                    else if(otherIsMissingMembers.isEmpty() && !otherHasExtraMembers.isEmpty())
+                        memberInfo = "§6Their Member List has §e" + StringUtil.join("§6, §e", "§6 and §e", otherHasExtraMembers) + "§6, which you don't have!";
+                    else if(!otherIsMissingMembers.isEmpty() && otherHasExtraMembers.isEmpty())
+                        memberInfo = "§6Their Member is missing §e" + StringUtil.join("§6, §e", "§6 and §e", otherIsMissingMembers) + "§6!";
+                    else
+                        memberInfo = "§aTheir Member List matches yours!";
+                }else {
+                    memberInfo = "§6No Member List provided.";
+                }
+                client.player.sendMessage(Text.of(ClientMod.PREFIX + "§aTest successful! " + modInfo + " " + protocolInfo + " " + memberInfo));
+            }
         }
 
-        if(shouldHandle(client, twoMemberRing, ncrDecryptionInfo, headerFields, message, true))
+        final HashMap<String, String> fHeaderFields = headerFields;
+        MessageModifyHandler modifier = () -> {
+            if(fHeaderFields.containsKey("id")) {
+                HashMap<String, String> newHeaderFields = new HashMap<>(fHeaderFields);
+                String memberList = StringUtil.join(",", ",", RingConfig.getInstance().ringMembers);
+                if(memberList.length() < 200) { // Prevent message becoming too long
+                    newHeaderFields.put("memberlist", StringUtil.join(",", ",", RingConfig.getInstance().ringMembers));
+                }
+                newHeaderFields.put("pv", PROTOCOL_VERSION + ""); // Protocol Version
+                newHeaderFields.put("mv", ClientMod.MOD_VERSION); // Mod Version
+                return new Pair<>(newHeaderFields, message);
+            }else {
+                // Don't change if no id field for backwards compatibility
+                return new Pair<>(fHeaderFields, message);
+            }
+        };
+        if(shouldHandle(client, twoMemberRing, ncrDecryptionInfo, headerFields, message, true, modifier))
             System.out.println("[RingMessage] " + senderUserName + " (presumably) probed you with a basic test.");
         return true;
     }
@@ -197,7 +263,21 @@ public class RingMessage {
         return true;
     }
 
-    public static boolean shouldHandle(MinecraftClient client, Ring.OrderedMemberRing ring, NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo, HashMap<String, String> headerFields, String message, boolean passAlong) {
+    public static interface MessageModifyHandler {
+        public Pair<HashMap<String, String>, String> getModifiedMessageToPassAlong();
+    }
+
+    public static boolean shouldHandle(MinecraftClient client, Ring.OrderedMemberRing ring,
+                                       NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo,
+                                       HashMap<String, String> headerFields, String message,
+                                       boolean passAlong) {
+        return shouldHandle(client, ring, ncrDecryptionInfo, headerFields, message, passAlong, null);
+    }
+
+    public static boolean shouldHandle(MinecraftClient client, Ring.OrderedMemberRing ring,
+                                       NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo,
+                                       HashMap<String, String> headerFields, String message,
+                                       boolean passAlong, @Nullable MessageModifyHandler passAlongModifier) {
         String senderUserName = headerFields.get("s"); // Was checked to exist earlier
 
         String nextMember = ring.after(client.getSession().getUsername());
@@ -207,6 +287,12 @@ public class RingMessage {
         }
 
         if(!senderUserName.equalsIgnoreCase(client.getSession().getUsername()) && passAlong) {
+            if(passAlongModifier != null) {
+                Pair<HashMap<String, String>, String> modified = passAlongModifier.getModifiedMessageToPassAlong();
+                headerFields = modified.getLeft();
+                message = modified.getRight();
+            }
+
             String fullMessage = encodeHeader(headerFields, true) + message;
             if(NoChatReportsUtil.isModAvailable() && message != null && !message.isBlank()) {
                 // (Re-)encrypt if suitable
@@ -314,6 +400,10 @@ public class RingMessage {
         return builder.toString();
     }
 
+    public static String generateMessageId() {
+        return generateHashModification();
+    }
+
     public static Ring.OrderedMemberRing createNewRing(MinecraftClient client) {
         HashSet<String> onlineMembers = Ring.getOnlineMembers(client, RingConfig.getInstance().ringMembers);
         //System.out.println("Online Members: " + StringUtil.joinCommaSeparated(onlineMembers));
@@ -362,6 +452,7 @@ public class RingMessage {
 
         HashMap<String, String> headerFields = new HashMap<>();
         headerFields.put("basictest", "");
+        headerFields.put("id", generateMessageId());
         sendNewRawRingMessage(client, twoMemberRing, headerFields, null);
     }
 
@@ -397,6 +488,9 @@ public class RingMessage {
     }
 
     public static int hashOfMessage(HashMap<String, String> headerFields, String message) {
+        if(headerFields.containsKey("id"))
+            return headerFields.get("id").hashCode();
+
         if(message == null) message = "";
         message = message.trim();
 

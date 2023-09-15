@@ -1,16 +1,21 @@
 package me.enderkill98.ringmessage;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-
+import java.util.Optional;
 
 public class ClientMod implements ClientModInitializer, ClientTickEvents.EndTick {
+
+	public static String MOD_VERSION = null;
 
 	public static ClientMod INSTANCE = null;
 	public static String PREFIX = "§8[§aRingMsg§8] §f";
@@ -23,6 +28,14 @@ public class ClientMod implements ClientModInitializer, ClientTickEvents.EndTick
 	@Override
 	public void onInitializeClient() {
 		INSTANCE = this;
+
+		// Find out own mod version
+		Optional<ModContainer> modContainer = FabricLoader.getInstance().getModContainer("ringmessage");
+		if(modContainer.isPresent())
+			MOD_VERSION = modContainer.get().getMetadata().getVersion().getFriendlyString();
+		else
+			MOD_VERSION = "Unknown!";
+
 		ClientTickEvents.END_CLIENT_TICK.register(this);
 	}
 
