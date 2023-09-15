@@ -10,7 +10,14 @@ import java.util.Arrays;
 public class RingMessageCommand {
 
     private void sendUsage(MinecraftClient client, String cmdName) {
-        sendMessage(client, "§eUsage: $" + cmdName + " <members <show/set/setForAll/sync ...>/send <message...>/debug [on/off]/alwaysEncrypt [on/off]/test <Member>/directUse [on/off]>");
+
+        sendMessage(client, "§eUsage:");
+        sendMessage(client, "§2» §a$" + cmdName + " members <show/set/add/rm/setAndSync/addAndSync/rmAndSync/sync> [...]", false);
+        sendMessage(client, "§2» §a$" + cmdName + " send <message...>", false);
+        sendMessage(client, "§2» §a$" + cmdName + " debug [on/off]", false);
+        sendMessage(client, "§2» §a$" + cmdName + " alwaysEncrypt [on/off] §o(with NoChatReports)", false);
+        sendMessage(client, "§2» §a$" + cmdName + " test <Member>", false);
+        sendMessage(client, "§2» §a$" + cmdName + " directUse [on/off]>", false);
     }
 
     private void sendMessage(MinecraftClient client, String message) {
@@ -31,7 +38,7 @@ public class RingMessageCommand {
             return;
         }
 
-        if(args[0].equalsIgnoreCase("members") && args.length > 1) {
+        if((args[0].equalsIgnoreCase("members") || args[0].equalsIgnoreCase("member")) && args.length > 1) {
             if(args[1].equalsIgnoreCase("show")) {
                 sendMessage(client, "§aMembers: §2" + StringUtil.joinCommaSeparated(RingConfig.getInstance().ringMembers));
                 return;
@@ -79,7 +86,7 @@ public class RingMessageCommand {
                     RingConfig.getInstance().save();
                     if(ring != null)
                         RingMessage.sendNewRingSyncMembersMessage(client, ring, RingConfig.getInstance().ringMembers);
-                    sendMessage(client, "§aAdded" + (ring == null ? "" : " and sent") + " Member §2" + newMember);
+                    sendMessage(client, "§aAdded Member §2" + newMember + (ring == null ? "§a." : "§a and sent new list."));
                     return;
                 }
             }else if(args[1].equalsIgnoreCase("rm") || args[1].equalsIgnoreCase("rmAndSync")) {
@@ -104,7 +111,7 @@ public class RingMessageCommand {
                     RingConfig.getInstance().save();
                     if(ring != null)
                         RingMessage.sendNewRingSyncMembersMessage(client, ring, RingConfig.getInstance().ringMembers);
-                    sendMessage(client, "§aRemoved Member §2" + oldMemberCorrectCasing + (ring == null ? "§a." : "§a and new list."));
+                    sendMessage(client, "§aRemoved Member §2" + oldMemberCorrectCasing + (ring == null ? "§a." : "§a and sent new list."));
                     return;
                 }
             }
