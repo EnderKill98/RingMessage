@@ -429,7 +429,9 @@ public class RingMessage {
         boolean didEncrypt = sendNewRawRingMessage(client, ring, null, message);
 
         if(client.player != null) {
-            String encryptionTooltip = """
+            String encryptionTooltip = null;
+            if(didEncrypt)
+                    encryptionTooltip = """
                     §a🔒 §a§nEncrypted with No Chat Reports§a 🔒
 
                     §aYou encrypted this message with
