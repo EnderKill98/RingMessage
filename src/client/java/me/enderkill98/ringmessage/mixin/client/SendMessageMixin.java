@@ -26,15 +26,11 @@ public abstract class SendMessageMixin {
                 }
                 chatText = chatText.substring("$ ".length());
                 chatText = normalize(chatText);
-                if (chatText.isEmpty()) {
-                    info.setReturnValue(true);
-                } else {
-                    if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
-
+                if (!chatText.isEmpty()) {
                     MinecraftClient.getInstance().player.networkHandler.sendChatMessage(chatText);
-
-                    info.setReturnValue(true);
                 }
+                if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
+                info.setReturnValue(true);
                 return;
             }
             chatText = "$rmsg send " + chatText.substring("$ ".length());
@@ -54,7 +50,7 @@ public abstract class SendMessageMixin {
             String[] args = chatText.contains(" ") ? chatText.split(" ") : new String[]{chatText};
             ClientMod.INSTANCE.ringMessageCommand.onExecute("rmsg", args);
 
-            if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
+            if (addToHistory && args.length > 1) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
             info.setReturnValue(true);
         }
     }
