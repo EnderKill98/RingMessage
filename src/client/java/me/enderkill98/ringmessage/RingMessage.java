@@ -70,7 +70,7 @@ public class RingMessage {
             }else {
                 // Most likely using official mod, which doesn't have the custom decryptDetailed() method
                 String maybeDecrypted = NoChatReportsUtil.decrypt(messagePart);
-                if(maybeDecrypted != null) maybeDecrypted = maybeDecrypted;
+                if(maybeDecrypted != null) messagePart = maybeDecrypted;
             }
         }
 
