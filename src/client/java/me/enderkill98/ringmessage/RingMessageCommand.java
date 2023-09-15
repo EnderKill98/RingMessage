@@ -6,7 +6,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 
 import java.util.Arrays;
-import java.util.HashMap;
 
 public class RingMessageCommand {
 
@@ -70,6 +69,9 @@ public class RingMessageCommand {
 
         if(args[0].equalsIgnoreCase("send")) {
             String message = StringUtil.join(" ", " ", Arrays.stream(args).skip(1));
+            if(message.isBlank()){
+                return;
+            }
             Ring.OrderedMemberRing ring = RingMessage.createNewRing(client);
             if(ring == null) {
                 sendMessage(client, "§cFailed to create new ring!");
