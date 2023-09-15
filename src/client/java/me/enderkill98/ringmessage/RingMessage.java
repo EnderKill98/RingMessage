@@ -58,7 +58,7 @@ public class RingMessage {
             messagePart = messageStr.substring(headerCloseCharIndex + 1); // Everything after the "]"
         }catch (IndexOutOfBoundsException ex) { } // No message
 
-
+        boolean wasEncrypted = false;
         NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo = null;
         if(NoChatReportsUtil.isModAvailable() && !messagePart.isBlank()) {
             if(NoChatReportsUtil.supportsDecryptDetailed()) {
@@ -66,11 +66,15 @@ public class RingMessage {
                 if(decryptionInfo.isPresent()) {
                     messagePart = decryptionInfo.get().decryptedText();
                     ncrDecryptionInfo = decryptionInfo.get();
+                    wasEncrypted = true;
                 }
             }else {
                 // Most likely using official mod, which doesn't have the custom decryptDetailed() method
                 String maybeDecrypted = NoChatReportsUtil.decrypt(messagePart);
-                if(maybeDecrypted != null) messagePart = maybeDecrypted;
+                if(maybeDecrypted != null) {
+                    messagePart = maybeDecrypted;
+                    wasEncrypted = true;
+                }
             }
         }
 
@@ -108,16 +112,19 @@ public class RingMessage {
         }
 
         if(headerFields.containsKey("syncmembers")) {
-            return handleReceivedMessageSyncMembers(client, ncrDecryptionInfo, headerFields, ring, messagePart);
+            return handleReceivedMessageSyncMembers(client, ncrDecryptionInfo, wasEncrypted, headerFields, ring, messagePart);
         } else if(headerFields.containsKey("basictest")) {
-                return handleReceivedBasicTestMessage(client, ncrDecryptionInfo, headerFields, ring, messagePart);
+                return handleReceivedBasicTestMessage(client, ncrDecryptionInfo, wasEncrypted, headerFields, ring, messagePart);
         } else if(!messagePart.isEmpty()) {
-            return handleReceivedMessageChat(client, ncrDecryptionInfo, headerFields, ring, messagePart);
+            return handleReceivedMessageChat(client, ncrDecryptionInfo, wasEncrypted, headerFields, ring, messagePart);
         }
         return true;
     }
 
-    public static boolean handleReceivedMessageSyncMembers(MinecraftClient client, NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo, HashMap<String, String> headerFields, Ring.OrderedMemberRing ring, String message) {
+    public static boolean handleReceivedMessageSyncMembers(MinecraftClient client,
+                                                           NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo,
+                                                           boolean wasEncrypted, HashMap<String, String> headerFields,
+                                                           Ring.OrderedMemberRing ring, String message) {
         String senderUserName = headerFields.get("s"); // Was checked to exist earlier
         String newRawMemberList = headerFields.get("syncmembers");
         if(newRawMemberList.isBlank()) {
@@ -140,7 +147,10 @@ public class RingMessage {
         return true;
     }
 
-    public static boolean handleReceivedBasicTestMessage(MinecraftClient client, NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo, HashMap<String, String> headerFields, Ring.OrderedMemberRing ring, String message) {
+    public static boolean handleReceivedBasicTestMessage(MinecraftClient client,
+                                                         NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo,
+                                                         boolean wasEncrypted, HashMap<String, String> headerFields,
+                                                         Ring.OrderedMemberRing ring, String message) {
         String senderUserName = headerFields.get("s"); // Was checked to exist earlier
         System.out.println("[RingMessage] Got Chat Message from presumably " + senderUserName + ": " + message);
 
@@ -223,16 +233,10 @@ public class RingMessage {
         return true;
     }
 
-    public static void showChatMessage(@NotNull ClientPlayerEntity player, String senderUserName, @Nullable String encryptionTooltip, String message) {
-        MutableText text = Text.of(ClientMod.PREFIX + "§2" + senderUserName).copy();
-        if(encryptionTooltip != null)
-            text.append(Text.literal(" 🔒").setStyle(Style.EMPTY.withColor(Formatting.GREEN).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.of(encryptionTooltip)))));
-        text.append(Text.literal(" »").setStyle(Style.EMPTY.withColor(Formatting.GREEN)));
-        text.append(Text.literal(" " + message).setStyle(Style.EMPTY.withColor(Formatting.GREEN)));
-        player.sendMessage(text);
-    }
-
-    public static boolean handleReceivedMessageChat(MinecraftClient client, NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo, HashMap<String, String> headerFields, Ring.OrderedMemberRing ring, String message) {
+    public static boolean handleReceivedMessageChat(MinecraftClient client,
+                                                    NoChatReportsUtil.DetailedDecryptionInfo ncrDecryptionInfo,
+                                                    boolean wasEncrypted, HashMap<String, String> headerFields,
+                                                    Ring.OrderedMemberRing ring, String message) {
         String senderUserName = headerFields.get("s"); // Was checked to exist earlier
         System.out.println("[RingMessage] Got Chat Message from presumably " + senderUserName + ": " + message + (ncrDecryptionInfo != null ? " (encrypted)" : ""));
 
@@ -240,7 +244,7 @@ public class RingMessage {
             ClientPlayerEntity player = MinecraftClient.getInstance().player;
             if(player != null) {
                 String encryptionTooltip = null;
-                if(NoChatReportsUtil.isModAvailable()) {
+                if(wasEncrypted && NoChatReportsUtil.isModAvailable()) {
                     if(ncrDecryptionInfo != null) {
                         encryptionTooltip = "§a🔒 §a§nEncrypted with No Chat Reports§a 🔒\n\n" +
                                 "§a🔑 §2Key Index: §a" + ncrDecryptionInfo.keyIndex() + "\n" +
@@ -261,6 +265,15 @@ public class RingMessage {
             }
         }
         return true;
+    }
+
+    public static void showChatMessage(@NotNull ClientPlayerEntity player, String senderUserName, @Nullable String encryptionTooltip, String message) {
+        MutableText text = Text.of(ClientMod.PREFIX + "§2" + senderUserName).copy();
+        if(encryptionTooltip != null)
+            text.append(Text.literal(" 🔒").setStyle(Style.EMPTY.withColor(Formatting.GREEN).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.of(encryptionTooltip)))));
+        text.append(Text.literal(" »").setStyle(Style.EMPTY.withColor(Formatting.GREEN)));
+        text.append(Text.literal(" " + message).setStyle(Style.EMPTY.withColor(Formatting.GREEN)));
+        player.sendMessage(text);
     }
 
     public static interface MessageModifyHandler {
