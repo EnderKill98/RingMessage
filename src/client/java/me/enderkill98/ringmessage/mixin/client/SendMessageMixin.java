@@ -47,7 +47,7 @@ public abstract class SendMessageMixin {
             info.setReturnValue(true); // Close chat screen and prevent further handling
         } else if(RingConfig.getInstance().directUse && !chatText.startsWith("/") && !chatText.startsWith(".") && !chatText.startsWith("#") && !chatText.startsWith(",") && !chatText.startsWith("+") && !chatText.startsWith("-")) {
             chatText = "send " + chatText;
-            String[] args = chatText.contains(" ") ? chatText.split(" ") : new String[]{chatText};
+            String[] args = chatText.split(" ");
             ClientMod.INSTANCE.ringMessageCommand.onExecute("rmsg", args);
 
             if (addToHistory && args.length > 1) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
