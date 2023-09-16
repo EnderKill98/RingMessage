@@ -202,7 +202,7 @@ public class RingMessage {
                     else if(otherIsMissingMembers.isEmpty() && !otherHasExtraMembers.isEmpty())
                         memberInfo = "§6Their Member List has §e" + StringUtil.join("§6, §e", "§6 and §e", otherHasExtraMembers) + "§6, which you don't have!";
                     else if(!otherIsMissingMembers.isEmpty() && otherHasExtraMembers.isEmpty())
-                        memberInfo = "§6Their Member is missing §e" + StringUtil.join("§6, §e", "§6 and §e", otherIsMissingMembers) + "§6!";
+                        memberInfo = "§6Their Member List is missing §e" + StringUtil.join("§6, §e", "§6 and §e", otherIsMissingMembers) + "§6!";
                     else
                         memberInfo = "§aTheir Member List matches yours!";
                 }else {
