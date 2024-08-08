@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ChatScreen.class)
@@ -15,13 +16,13 @@ public abstract class SendMessageMixin {
 
     @Shadow public abstract String normalize(String chatText);
 
-    @Inject(at = @At("HEAD"), method = "sendMessage(Ljava/lang/String;Z)Z", cancellable = true)
-    private void sendMessage(String chatText, boolean addToHistory, CallbackInfoReturnable<Boolean> info) {
+    @Inject(at = @At("HEAD"), method = "sendMessage", cancellable = true)
+    private void sendMessage(String chatText, boolean addToHistory, CallbackInfo info) {
         final String origChatText = chatText;
         if (chatText.startsWith("$ ")) {
             if(RingConfig.getInstance().directUse){
                 if(MinecraftClient.getInstance().player == null){
-                    info.setReturnValue(true);
+                    info.cancel();
                     return;
                 }
                 chatText = chatText.substring("$ ".length());
@@ -30,7 +31,7 @@ public abstract class SendMessageMixin {
                     MinecraftClient.getInstance().player.networkHandler.sendChatMessage(chatText);
                 }
                 if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
-                info.setReturnValue(true);
+                info.cancel();
                 return;
             }
             chatText = "$rmsg send " + chatText.substring("$ ".length());
@@ -44,14 +45,14 @@ public abstract class SendMessageMixin {
             ClientMod.INSTANCE.ringMessageCommand.onExecute(cmdName, args);
 
             if (addToHistory) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
-            info.setReturnValue(true); // Close chat screen and prevent further handling
+            info.cancel(); // Close chat screen and prevent further handling
         } else if(RingConfig.getInstance().directUse && !chatText.startsWith("/") && !chatText.startsWith(".") && !chatText.startsWith("#") && !chatText.startsWith(",") && !chatText.startsWith("+") && !chatText.startsWith("-")) {
             chatText = "send " + chatText;
             String[] args = chatText.split(" ");
             ClientMod.INSTANCE.ringMessageCommand.onExecute("rmsg", args);
 
             if (addToHistory && args.length > 1) MinecraftClient.getInstance().inGameHud.getChatHud().addToMessageHistory(origChatText);
-            info.setReturnValue(true);
+            info.cancel();
         }
     }
 
