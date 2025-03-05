@@ -27,7 +27,7 @@ public class RingMessageCommand {
 
     private void sendMessage(MinecraftClient client, String message, boolean prefix) {
         if(client.player != null)
-            client.player.sendMessage(Text.of((prefix ? ClientMod.PREFIX : "") + message));
+            client.player.sendMessage(Text.of((prefix ? ClientMod.PREFIX : "") + message), false);
     }
 
     public void onExecute(String cmdName, String[] args) {

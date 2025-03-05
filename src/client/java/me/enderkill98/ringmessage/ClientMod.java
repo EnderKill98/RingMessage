@@ -58,7 +58,7 @@ public class ClientMod implements ClientModInitializer, ClientTickEvents.EndTick
 		for(Integer unconfirmedHash : stillNotConfirmed) {
 			System.err.println("[RingMessage] A message you sent timed out (message hash: " + unconfirmedHash + ")!");
 			if(client.player != null)
-				client.player.sendMessage(Text.of(PREFIX + "§4A message you just sent might not have reached everyone who is online!"));
+				client.player.sendMessage(Text.of(PREFIX + "§4A message you just sent might not have reached everyone who is online!"), false);
 			expectConfirmationUntil.remove(unconfirmedHash);
 		}
 	}

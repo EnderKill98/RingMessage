@@ -142,7 +142,7 @@ public class RingMessage {
 
             ClientPlayerEntity player = MinecraftClient.getInstance().player;
             if(player != null)
-                player.sendMessage(Text.of(ClientMod.PREFIX + "§2" + senderUserName + "§e updated the Members to: §6" + StringUtil.joinCommaSeparated(RingConfig.getInstance().ringMembers)));
+                player.sendMessage(Text.of(ClientMod.PREFIX + "§2" + senderUserName + "§e updated the Members to: §6" + StringUtil.joinCommaSeparated(RingConfig.getInstance().ringMembers)), false);
         }
         return true;
     }
@@ -208,7 +208,7 @@ public class RingMessage {
                 }else {
                     memberInfo = "§6No Member List provided.";
                 }
-                client.player.sendMessage(Text.of(ClientMod.PREFIX + "§aTest successful! " + modInfo + " " + protocolInfo + " " + memberInfo));
+                client.player.sendMessage(Text.of(ClientMod.PREFIX + "§aTest successful! " + modInfo + " " + protocolInfo + " " + memberInfo), false);
             }
         }
 
@@ -273,7 +273,7 @@ public class RingMessage {
             text.append(Text.literal(" 🔒").setStyle(Style.EMPTY.withColor(Formatting.GREEN).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.of(encryptionTooltip)))));
         text.append(Text.literal(" »").setStyle(Style.EMPTY.withColor(Formatting.GREEN)));
         text.append(Text.literal(" " + message).setStyle(Style.EMPTY.withColor(Formatting.GREEN)));
-        player.sendMessage(text);
+        player.sendMessage(text, false);
     }
 
     public static interface MessageModifyHandler {
@@ -335,7 +335,7 @@ public class RingMessage {
             return true;
         }else if (passAlong) {
             if(RingConfig.getInstance().debug && client.player != null)
-                client.player.sendMessage(Text.of(ClientMod.PREFIX + "§oYour message was received by everyone."));
+                client.player.sendMessage(Text.of(ClientMod.PREFIX + "§oYour message was received by everyone."), false);
             int messageHash = hashOfMessage(headerFields, message);
             if(ClientMod.INSTANCE.expectConfirmationUntil.containsKey(messageHash)) {
                 MainMod.LOGGER.info("[RingMessage] Message with Message Hash" + messageHash + " was successfully sent to everyone!");
@@ -343,7 +343,7 @@ public class RingMessage {
             } else {
                 MainMod.LOGGER.info("[RingMessage] Message with Message Hash" + messageHash + " was successfully sent to everyone!");
                 if(client.player != null)
-                    client.player.sendMessage(Text.of(ClientMod.PREFIX + "§eRe-received a message that was not expected (confirmation already timed out or forged message)!"));
+                    client.player.sendMessage(Text.of(ClientMod.PREFIX + "§eRe-received a message that was not expected (confirmation already timed out or forged message)!"), false);
             }
 
             // Got confirmation from last user in ring!
