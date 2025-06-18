@@ -26,14 +26,7 @@ public class ChatUtil {
         if(command.length() > 256) command = command.substring(0, 256);
         ClientPlayNetworkHandler network = client.getNetworkHandler();
         if(network == null) return;
-        String cmd = command.contains(" ") ? command.split(" ")[0] : command;
-        if(cmd.equalsIgnoreCase("w") || cmd.equalsIgnoreCase("whisper")
-                || cmd.equalsIgnoreCase("msg") || cmd.equalsIgnoreCase("tell")
-                || cmd.equalsIgnoreCase("teammsg") || cmd.equalsIgnoreCase("me")) {
-            network.sendChatCommand(command);
-        }else {
-            network.sendCommand(command);
-        }
+        network.sendChatCommand(command);
     }
 
 }
