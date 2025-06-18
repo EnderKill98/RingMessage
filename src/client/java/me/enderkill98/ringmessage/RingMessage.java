@@ -270,7 +270,7 @@ public class RingMessage {
     public static void showChatMessage(@NotNull ClientPlayerEntity player, String senderUserName, @Nullable String encryptionTooltip, String message) {
         MutableText text = Text.of(ClientMod.PREFIX + "§2" + senderUserName).copy();
         if(encryptionTooltip != null)
-            text.append(Text.literal(" 🔒").setStyle(Style.EMPTY.withColor(Formatting.GREEN).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.of(encryptionTooltip)))));
+            text.append(Text.literal(" 🔒").setStyle(Style.EMPTY.withColor(Formatting.GREEN).withHoverEvent(new HoverEvent.ShowText(Text.of(encryptionTooltip)))));
         text.append(Text.literal(" »").setStyle(Style.EMPTY.withColor(Formatting.GREEN)));
         text.append(Text.literal(" " + message).setStyle(Style.EMPTY.withColor(Formatting.GREEN)));
         player.sendMessage(text, false);
